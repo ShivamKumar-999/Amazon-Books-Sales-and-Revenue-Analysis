@@ -62,7 +62,17 @@ Python	Data preprocessing & transformation
 HTML/CSS	Dashboard development
 Claude AI	Dashboard UI generation/support
 Data Cleaning / Preparation
-
+(Raw Data
+   ↓
+Python (Import + Cleaning + EDA)
+   ↓
+SQL Database Loading
+   ↓
+SQL Business Analysis
+   ↓
+Dashboard Development
+   ↓
+Business Insights & Recommendations)
 
 
 
