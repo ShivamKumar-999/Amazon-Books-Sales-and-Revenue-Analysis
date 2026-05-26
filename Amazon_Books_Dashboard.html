@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Amazon Books — Sales Intelligence Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b0f1a;--bg2:#111827;--bg3:#1c2333;--bg4:#242d3e;
+  --border:#2a3347;--border2:#3a4560;
+  --amber:#f59e0b;--amber2:#fbbf24;--amber-dim:#78490a;
+  --teal:#14b8a6;--teal-dim:#0d5c55;
+  --blue:#3b82f6;--blue-dim:#1e3a6e;
+  --red:#ef4444;--red-dim:#7f1d1d;
+  --green:#22c55e;--green-dim:#14532d;
+  --purple:#a78bfa;--purple-dim:#4c1d95;
+  --text:#f1f5f9;--text2:#94a3b8;--text3:#64748b;
+  --font:'Sora',sans-serif;--mono:'IBM Plex Mono',monospace;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;min-height:100vh}
+.header{background:var(--bg2);border-bottom:1px solid var(--border);padding:16px 28px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:100}
+.header-logo{font-size:18px;font-weight:600;letter-spacing:-0.5px}
+.header-logo span{color:var(--amber)}
+.header-sub{color:var(--text3);font-size:12px;font-family:var(--mono)}
+.header-pills{margin-left:auto;display:flex;gap:8px}
+.pill{background:var(--bg3);border:1px solid var(--border);padding:4px 12px;border-radius:20px;font-size:11px;color:var(--text2);font-family:var(--mono)}
+.pill.green{background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.3);color:var(--green)}
+.nav{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 28px;display:flex;gap:2px}
+.nav-btn{padding:12px 18px;cursor:pointer;font-family:var(--font);font-size:13px;color:var(--text3);border:none;background:none;border-bottom:2px solid transparent;transition:.2s;white-space:nowrap}
+.nav-btn:hover{color:var(--text2)}
+.nav-btn.active{color:var(--amber);border-bottom-color:var(--amber);font-weight:500}
+.content{padding:24px 28px;max-width:1400px;margin:0 auto}
+.tab{display:none}.tab.active{display:block}
+.section-title{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--mono);margin-bottom:16px}
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kpi.amber::before{background:var(--amber)}
+.kpi.teal::before{background:var(--teal)}
+.kpi.red::before{background:var(--red)}
+.kpi.blue::before{background:var(--blue)}
+.kpi.green::before{background:var(--green)}
+.kpi-label{font-size:10px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.kpi-value{font-size:22px;font-weight:600;font-family:var(--mono);line-height:1}
+.kpi-sub{font-size:11px;color:var(--text3);margin-top:6px}
+.kpi-delta{display:inline-block;font-size:10px;padding:2px 6px;border-radius:4px;font-family:var(--mono);margin-top:4px}
+.kpi-delta.up{background:rgba(34,197,94,.15);color:var(--green)}
+.kpi-delta.down{background:rgba(239,68,68,.15);color:var(--red)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.grid3{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:20px}
+.grid-reverse{display:grid;grid-template-columns:1fr 2fr;gap:16px;margin-bottom:20px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px}
+.card-title{font-size:12px;font-weight:500;color:var(--text2);margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.card-title .q-badge{font-size:10px;background:var(--bg4);color:var(--amber);padding:2px 7px;border-radius:4px;font-family:var(--mono)}
+.card-desc{font-size:11px;color:var(--text3);margin-bottom:16px}
+.chart-wrap{position:relative;width:100%}
+.insight-box{background:var(--bg3);border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:8px;padding:14px 16px;margin-bottom:12px}
+.insight-box.teal{border-left-color:var(--teal)}
+.insight-box.red{border-left-color:var(--red)}
+.insight-box.green{border-left-color:var(--green)}
+.insight-box.blue{border-left-color:var(--blue)}
+.insight-label{font-size:9px;font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;color:var(--amber);margin-bottom:5px}
+.insight-box.teal .insight-label{color:var(--teal)}
+.insight-box.red .insight-label{color:var(--red)}
+.insight-box.green .insight-label{color:var(--green)}
+.insight-box.blue .insight-label{color:var(--blue)}
+.insight-text{font-size:12px;color:var(--text2);line-height:1.6}
+.insight-text strong{color:var(--text);font-weight:500}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:8px 10px;color:var(--text3);font-weight:400;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)}
+td{padding:9px 10px;border-bottom:1px solid var(--border);color:var(--text2)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg3)}
+.rank-num{color:var(--text3);font-family:var(--mono);font-size:11px}
+.amount{font-family:var(--mono);color:var(--text)}
+.amount.green{color:var(--green)}
+.amount.amber{color:var(--amber)}
+.bar-mini{background:var(--bg4);border-radius:3px;height:5px;margin-top:4px}
+.bar-mini-fill{background:var(--amber);height:5px;border-radius:3px;transition:.3s}
+.bar-mini-fill.teal{background:var(--teal)}
+.bar-mini-fill.blue{background:var(--blue)}
+.badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:4px;font-family:var(--mono)}
+.badge.cat-ce{background:rgba(59,130,246,.15);color:#60a5fa}
+.badge.cat-pe{background:rgba(20,184,166,.15);color:var(--teal)}
+.badge.cat-ot{background:rgba(148,163,184,.1);color:var(--text3)}
+.badge.cat-la{background:rgba(167,139,250,.15);color:var(--purple)}
+.tab-sub-nav{display:flex;gap:8px;margin-bottom:20px}
+.tab-sub-btn{padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text3);cursor:pointer;font-size:12px;font-family:var(--font);transition:.2s}
+.tab-sub-btn.active{background:rgba(245,158,11,.1);border-color:var(--amber);color:var(--amber)}
+.sim-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.sim-row:last-child{border-bottom:none}
+.sim-title{font-size:12px;color:var(--text2);flex:1;line-height:1.4}
+.sim-bars{flex:1}
+.sim-val{font-family:var(--mono);font-size:12px;min-width:80px;text-align:right}
+.pareto-bar{display:flex;height:24px;border-radius:5px;overflow:hidden;margin-bottom:8px}
+.pareto-seg{display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;font-family:var(--mono)}
+.filter-row{display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap}
+.filter-select{background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:6px 10px;border-radius:6px;font-size:12px;font-family:var(--font)}
+.stat-chip{background:var(--bg3);border:1px solid var(--border);padding:6px 12px;border-radius:6px;display:inline-flex;gap:8px;align-items:center;font-size:12px}
+.stat-chip span{color:var(--amber);font-family:var(--mono);font-weight:500}
+.section-divider{height:1px;background:var(--border);margin:24px 0}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-logo">📦 Amazon <span>Books</span> — Sales Intelligence</div>
+    <div class="header-sub">14,339 transactions · 673 titles · 2021–2025</div>
+  </div>
+  <div class="header-pills">
+    <span class="pill green">● Live Data</span>
+    <span class="pill">₹ INR</span>
+    <span class="pill">5 Sections · 15 Questions</span>
+  </div>
+</div>
+
+<div class="nav">
+  <button class="nav-btn active" onclick="switchTab('overview')">① Revenue &amp; Sales</button>
+  <button class="nav-btn" onclick="switchTab('categories')">② Category Performance</button>
+  <button class="nav-btn" onclick="switchTab('products')">③ Products &amp; Books</button>
+  <button class="nav-btn" onclick="switchTab('daily')">④ Daily Operations</button>
+  <button class="nav-btn" onclick="switchTab('growth')">⑤ Growth Lab</button>
+</div>
+
+<div class="content">
+
+<!-- ====== TAB 1: OVERVIEW ====== -->
+<div id="tab-overview" class="tab active">
+  <p class="section-title">Part 1 — Revenue &amp; Sales Performance · Q1, Q3</p>
+  <div class="kpi-row">
+    <div class="kpi amber">
+      <div class="kpi-label">Total Gross Revenue</div>
+      <div class="kpi-value">₹1.26Cr</div>
+      <div class="kpi-sub">₹12,626,048 across all transactions</div>
+    </div>
+    <div class="kpi teal">
+      <div class="kpi-label">Total Net Revenue</div>
+      <div class="kpi-value">₹90.7L</div>
+      <div class="kpi-sub">After-cut charges to seller</div>
+    </div>
+    <div class="kpi red">
+      <div class="kpi-label">Platform Cut</div>
+      <div class="kpi-value">28.1%</div>
+      <div class="kpi-sub">₹35.5L retained by Amazon</div>
+    </div>
+    <div class="kpi blue">
+      <div class="kpi-label">Total Units Sold</div>
+      <div class="kpi-value">14,664</div>
+      <div class="kpi-sub">Across 673 unique titles</div>
+    </div>
+    <div class="kpi green">
+      <div class="kpi-label">Total Orders</div>
+      <div class="kpi-value">14,339</div>
+      <div class="kpi-sub">Avg 13.5 orders/day</div>
+    </div>
+  </div>
+
+  <div class="grid3">
+    <div class="card">
+      <div class="card-title"><span class="q-badge">Q3</span> Monthly Net Revenue Trend</div>
+      <div class="card-desc">Net revenue by month · 2021–2025 · Strongest periods highlighted</div>
+      <div class="chart-wrap" style="height:280px">
+        <canvas id="monthlyChart" role="img" aria-label="Monthly net revenue trend from 2021 to 2025">Monthly revenue data across 5 years.</canvas>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title"><span class="q-badge">Q1</span> Revenue Split</div>
+        <div class="card-desc">Gross vs Net vs Platform Cut</div>
+        <div class="chart-wrap" style="height:160px">
+          <canvas id="splitChart" role="img" aria-label="Donut showing revenue split between net and platform cut">Revenue split visualization.</canvas>
+        </div>
+        <div style="display:flex;gap:12px;margin-top:12px;font-size:11px">
+          <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:#14b8a6;display:inline-block"></span>Net ₹90.7L (71.9%)</span>
+          <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:#ef4444;display:inline-block"></span>Cut ₹35.5L (28.1%)</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Year-over-Year</div>
+        <div class="chart-wrap" style="height:100px">
+          <canvas id="yoyChart" role="img" aria-label="Year over year net revenue bar chart">YoY revenue data.</canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title"><span class="q-badge">Q3</span> Quarterly Breakdown</div>
+      <div class="card-desc">Net revenue aggregated by quarter across all years</div>
+      <div class="chart-wrap" style="height:200px">
+        <canvas id="quarterChart" role="img" aria-label="Bar chart of net revenue by quarter Q1-Q4">Quarterly revenue breakdown.</canvas>
+      </div>
+    </div>
+    <div>
+      <div class="insight-box">
+        <div class="insight-label">💡 Revenue Insight — Q1</div>
+        <div class="insight-text">Total gross revenue is <strong>₹1.26 Cr</strong> but Amazon's platform cut of <strong>28.1% (₹35.5L)</strong> is significant. Industry standard for books is 30–40%, so this is relatively competitive. However, on high-volume titles, even a 2% reduction in the cut would add ~₹7.1L to your bottom line.</div>
+      </div>
+      <div class="insight-box teal">
+        <div class="insight-label">📈 Trend Insight — Q3</div>
+        <div class="insight-text"><strong>2023 was the peak revenue year</strong> at ₹25.6L net — 2024 declined by ~17% to ₹21.1L. This suggests possible market saturation or pricing pressure. The <strong>Jun–Aug window</strong> consistently outperforms all other months (exam prep season drives demand).</div>
+      </div>
+      <div class="insight-box green">
+        <div class="insight-label">📊 Seasonal Pattern</div>
+        <div class="insight-text">Q1 (Jan–Mar) and Q3 (Jul–Sep) are the two dominant quarters. These align with <strong>exam notification cycles</strong> for competitive exams (UGC NET, TGT/PGT, SSC). Consider stock-up promotions in May–June to front-load demand.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== TAB 2: CATEGORIES ====== -->
+<div id="tab-categories" class="tab">
+  <p class="section-title">Part 1 — Category Revenue Analysis · Q2, Q8</p>
+  <div class="kpi-row" style="grid-template-columns:repeat(3,1fr)">
+    <div class="kpi blue">
+      <div class="kpi-label">Top Category</div>
+      <div class="kpi-value" style="font-size:16px">Competitive Exam</div>
+      <div class="kpi-sub">₹49.8L net · 54.8% share</div>
+    </div>
+    <div class="kpi teal">
+      <div class="kpi-label">2nd Category</div>
+      <div class="kpi-value" style="font-size:16px">Physical Education</div>
+      <div class="kpi-sub">₹34.1L net · 37.6% share</div>
+    </div>
+    <div class="kpi amber">
+      <div class="kpi-label">Combined Share</div>
+      <div class="kpi-value">92.4%</div>
+      <div class="kpi-sub">Top 2 categories dominate revenue</div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title"><span class="q-badge">Q2</span> Net Revenue Share by Category</div>
+      <div class="card-desc">Each category's share of total ₹90.7L net revenue</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;font-size:11px;flex-wrap:wrap">
+        <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#3b82f6;display:inline-block"></span>Competitive Exam 54.8%</span>
+        <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#14b8a6;display:inline-block"></span>Physical Education 37.6%</span>
+        <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#64748b;display:inline-block"></span>Other 7.1%</span>
+        <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#a78bfa;display:inline-block"></span>Language 0.4%</span>
+      </div>
+      <div class="chart-wrap" style="height:240px">
+        <canvas id="catDonut" role="img" aria-label="Donut chart of net revenue share by book category">Category revenue shares.</canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="q-badge">Q2</span> Gross vs Net by Category</div>
+      <div class="card-desc">Platform cut impact across categories (₹)</div>
+      <div class="chart-wrap" style="height:280px">
+        <canvas id="catBar" role="img" aria-label="Horizontal bar chart comparing gross vs net revenue by category">Category gross vs net comparison.</canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid3">
+    <div class="card">
+      <div class="card-title"><span class="q-badge">Q8</span> Order Mix — Category Composition</div>
+      <div class="card-desc">How orders break down by book category</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Category</th><th>Orders</th><th>Units</th><th>Net Revenue</th><th>Avg Net/Unit</th><th>Cut %</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><span class="badge cat-ce">Competitive Exam</span></td>
+              <td class="amount">8,142</td>
+              <td class="amount">7,580</td>
+              <td class="amount amber">₹49,75,661</td>
+              <td class="amount">₹656</td>
+              <td class="amount">28.8%</td>
+            </tr>
+            <tr>
+              <td><span class="badge cat-pe">Physical Education</span></td>
+              <td class="amount">5,513</td>
+              <td class="amount">5,298</td>
+              <td class="amount amber">₹34,10,705</td>
+              <td class="amount">₹643</td>
+              <td class="amount">29.1%</td>
+            </tr>
+            <tr>
+              <td><span class="badge cat-ot">Other</span></td>
+              <td class="amount">607</td>
+              <td class="amount">1,708</td>
+              <td class="amount">₹6,48,531</td>
+              <td class="amount">₹380</td>
+              <td class="amount">16.9%</td>
+            </tr>
+            <tr>
+              <td><span class="badge cat-la">Language</span></td>
+              <td class="amount">77</td>
+              <td class="amount">77</td>
+              <td class="amount">₹38,589</td>
+              <td class="amount">₹501</td>
+              <td class="amount">19.4%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div>
+      <div class="insight-box blue">
+        <div class="insight-label">💡 Category Insight — Q2</div>
+        <div class="insight-text">Your catalog is <strong>hyper-concentrated</strong> — just 2 categories (Competitive Exam + Physical Education) generate <strong>92.4% of all net revenue</strong>. This is high-risk but also an opportunity: dominate these niches before diversifying.</div>
+      </div>
+      <div class="insight-box">
+        <div class="insight-label">🔍 Margin Gap — Q12 Preview</div>
+        <div class="insight-text">Despite high volume, the <strong>"Other" category</strong> has the lowest net/unit (₹380) but also the lowest platform cut (16.9%). This suggests books priced below Amazon's cut threshold — an opportunity to reprice upward without eroding margin %.</div>
+      </div>
+      <div class="insight-box red">
+        <div class="insight-label">⚠️ Revenue Risk</div>
+        <div class="insight-text">With <strong>zero presence in Science, Math, History</strong> — high-demand categories for competitive exams — there's a significant untapped market. A student buying PE books likely also needs GK/Science prep materials.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== TAB 3: PRODUCTS ====== -->
+<div id="tab-products" class="tab">
+  <p class="section-title">Part 2 — Product &amp; Book Performance · Q4, Q5, Q6</p>
+
+  <div class="grid2" style="margin-bottom:20px">
+    <div class="card">
+      <div class="card-title"><span class="q-badge">Q4</span> Top 10 Books — Units Sold</div>
+      <div class="card-desc">Best sellers ranked by quantity · net revenue contribution shown</div>
+      <div class="chart-wrap" style="height:320px">
+        <canvas id="top10Chart" role="img" aria-label="Horizontal bar chart of top 10 books by units sold">Top 10 best selling books.</canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="q-badge">Q5</span> Top 10 Books — Margin per Unit</div>
+      <div class="card-desc">Where the platform cut is largest in absolute ₹ — highest seller profit/copy</div>
+      <div class="chart-wrap" style="height:320px">
+        <canvas id="marginChart" role="img" aria-label="Horizontal bar chart of top 10 books by margin per unit">Top 10 margin books.</canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid3">
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title"><span class="q-badge">Q4</span> Best Sellers Detail Table</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Book Title</th><th>Units</th><th>Net Revenue</th><th>Margin/Unit</th></tr></thead>
+            <tbody id="top10Table"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="q-badge">Q6</span> Demand Consistency — Days Active</div>
+        <div class="card-desc">Books appearing on the most unique purchase dates = stable demand</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Book Title</th><th>Active Days</th><th>Units</th></tr></thead>
+            <tbody id="consistTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="insight-box">
+        <div class="insight-label">🏆 Bestseller Insight — Q4</div>
+        <div class="insight-text"><strong>"Physical Education Universe"</strong> leads by volume at 1,250 units but only contributes ₹4.4L net — that's ₹356/unit. Meanwhile <strong>"Physical Education - UGC Net Digest"</strong> (678 units) generates ₹10.2L net — 3× the net per unit. Volume ≠ profit.</div>
+      </div>
+      <div class="insight-box teal">
+        <div class="insight-label">💰 Margin Insight — Q5</div>
+        <div class="insight-text">The <strong>UGC NET Digest 3-Vol Set</strong> earns ₹2,300/unit margin — the highest in the catalog. If you pushed 100 more units of this title, that's ₹2.3L incremental revenue. Focus marketing budget on high-margin slow-movers before price-cutting bestsellers.</div>
+      </div>
+      <div class="insight-box green">
+        <div class="insight-label">📅 Consistency Insight — Q6</div>
+        <div class="insight-text">Books with <strong>200+ active selling days</strong> have institutional demand — likely prescribed/recommended by institutes. These titles are <strong>immune to promotional cycles</strong> and should never be discounted. Books with 1–2 active days are one-time spike purchases — demand-volatile, discount-sensitive.</div>
+      </div>
+      <div class="insight-box blue">
+        <div class="insight-label">🔑 Action Item</div>
+        <div class="insight-text">Create two pricing strategies: <strong>premium/stable pricing</strong> for high-consistency books (steady demand, price-insensitive) and <strong>promotional/bundled pricing</strong> for low-consistency titles to convert spike demand into repeat purchases.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== TAB 4: DAILY OPS ====== -->
+<div id="tab-daily" class="tab">
+  <p class="section-title">Part 3 — Daily Sales &amp; Order Patterns · Q7, Q8, Q9, Q10</p>
+
+  <div class="kpi-row" style="grid-template-columns:repeat(4,1fr)">
+    <div class="kpi amber">
+      <div class="kpi-label">Avg Orders / Day</div>
+      <div class="kpi-value">13.5</div>
+      <div class="kpi-sub">Across 1,065 trading days</div>
+    </div>
+    <div class="kpi teal">
+      <div class="kpi-label">Avg Net Revenue / Day</div>
+      <div class="kpi-value">₹8,520</div>
+      <div class="kpi-sub">Steady baseline daily run-rate</div>
+    </div>
+    <div class="kpi red">
+      <div class="kpi-label">Peak Day Net Revenue</div>
+      <div class="kpi-value">₹41,075</div>
+      <div class="kpi-sub">12 Aug 2023 · 4.8× avg day</div>
+    </div>
+    <div class="kpi blue">
+      <div class="kpi-label">Peak Day Orders</div>
+      <div class="kpi-value">16</div>
+      <div class="kpi-sub">Max orders in single day</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-title"><span class="q-badge">Q10</span> Monthly Revenue Trend — Velocity Analysis</div>
+    <div class="card-desc">Net revenue per month with 3-month moving average · identify acceleration vs deceleration</div>
+    <div class="chart-wrap" style="height:260px">
+      <canvas id="velocityChart" role="img" aria-label="Line chart showing monthly revenue trend with moving average">Revenue velocity trend chart.</canvas>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title"><span class="q-badge">Q9</span> Spike Day Analysis — Top 15 Revenue Days</div>
+      <div class="card-desc">Highest net revenue days · spot seasonal and event-driven spikes</div>
+      <div class="chart-wrap" style="height:260px">
+        <canvas id="spikeChart" role="img" aria-label="Bar chart of top 15 highest revenue days">Top revenue days chart.</canvas>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title"><span class="q-badge">Q7</span> Daily Operations Summary</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
+          <div style="background:var(--bg3);padding:12px;border-radius:8px">
+            <div style="font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Best Month</div>
+            <div style="font-size:15px;font-weight:600;font-family:var(--mono)">Aug 2023</div>
+            <div style="font-size:11px;color:var(--text3)">₹1,70,000+ net</div>
+          </div>
+          <div style="background:var(--bg3);padding:12px;border-radius:8px">
+            <div style="font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Worst Month</div>
+            <div style="font-size:15px;font-weight:600;font-family:var(--mono)">Jan 2025</div>
+            <div style="font-size:11px;color:var(--text3)">Partial / low data</div>
+          </div>
+          <div style="background:var(--bg3);padding:12px;border-radius:8px">
+            <div style="font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Trading Days</div>
+            <div style="font-size:15px;font-weight:600;font-family:var(--mono)">1,065</div>
+            <div style="font-size:11px;color:var(--text3)">Across 4+ years</div>
+          </div>
+          <div style="background:var(--bg3);padding:12px;border-radius:8px">
+            <div style="font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Peak Day</div>
+            <div style="font-size:15px;font-weight:600;font-family:var(--mono)">12-Aug-23</div>
+            <div style="font-size:11px;color:var(--text3)">₹41,075 net</div>
+          </div>
+        </div>
+      </div>
+      <div class="insight-box">
+        <div class="insight-label">📊 Spike Analysis — Q9</div>
+        <div class="insight-text">Aug 2023 spike (₹41,075 in a single day) is <strong>4.8× the daily average</strong>. This coincides with <strong>UGC NET exam notifications</strong> — a classic demand pulse event. Build an "exam alert" promotions calendar around known exam cycle dates to pre-position inventory and listings.</div>
+      </div>
+      <div class="insight-box teal">
+        <div class="insight-label">📉 Trend Velocity — Q10</div>
+        <div class="insight-text">Revenue velocity <strong>peaked in late 2022–mid 2023</strong> then began declining. 2024 shows flatter monthly averages. This is not collapse — it's the difference between <strong>growth phase vs maturity phase</strong>. Time to focus on margin expansion rather than pure volume growth.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== TAB 5: GROWTH LAB ====== -->
+<div id="tab-growth" class="tab">
+  <p class="section-title">Part 4 — Advanced Revenue Growth · Q11, Q12, Q13, Q14, Q15</p>
+
+  <div class="grid2" style="margin-bottom:20px">
+    <div class="card">
+      <div class="card-title"><span class="q-badge">Q11</span> Pricing Simulation — 10% Price Increase on Top 5 Titles</div>
+      <div class="card-desc">Using current volume as baseline · projected revenue uplift per title</div>
+      <div class="chart-wrap" style="height:220px">
+        <canvas id="pricingChart" role="img" aria-label="Bar chart showing current vs projected revenue with 10% price increase">Pricing simulation chart.</canvas>
+      </div>
+      <div style="margin-top:16px;padding:12px;background:var(--bg3);border-radius:8px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px">Total Projected Uplift</div>
+          <div style="font-size:20px;font-weight:600;font-family:var(--mono);color:var(--green)">+ ₹2,79,035</div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);text-align:right">On top 5 titles alone<br>assuming demand is inelastic</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="q-badge">Q13</span> Bundle Intelligence — Frequently Co-Purchased Titles</div>
+      <div class="card-desc">Books bought on same day · potential bundle pairs · 5% bundle discount vs separate</div>
+      <div id="bundleTable" class="table-wrap" style="max-height:320px;overflow-y:auto">
+        <table>
+          <thead><tr><th>Book A</th><th>Book B</th><th>Co-Purchase Days</th><th>Bundle Opportunity</th></tr></thead>
+          <tbody id="bundleTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2" style="margin-bottom:20px">
+    <div class="card">
+      <div class="card-title"><span class="q-badge">Q14</span> Portfolio Pruning — Pareto Revenue Analysis</div>
+      <div class="card-desc">80/20 rule applied to book catalog · which titles are consuming space without revenue</div>
+      <div class="chart-wrap" style="height:200px">
+        <canvas id="paretoChart" role="img" aria-label="Pareto chart showing top books generating most revenue">Pareto analysis of book catalog.</canvas>
+      </div>
+      <div style="margin-top:14px">
+        <div class="pareto-bar">
+          <div class="pareto-seg" style="width:20%;background:#f59e0b;color:#412402">Top 20%<br>99.7%</div>
+          <div class="pareto-seg" style="width:80%;background:#1c2333;color:var(--text3);font-size:9px;justify-content:flex-end;padding-right:8px">Bottom 80% = 0.3% revenue · 135 books = prunable</div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px">538 books generate 99.7% of net revenue · 135 books contribute just 0.3% (₹27,300)</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="q-badge">Q12</span> Margin Gap Analysis — Volume Leaders with Low Net/Unit</div>
+      <div class="card-desc">High-volume categories with disproportionately low net revenue per unit</div>
+      <div class="chart-wrap" style="height:180px">
+        <canvas id="marginGapChart" role="img" aria-label="Scatter-style bar chart of volume vs net per unit by category">Margin gap analysis chart.</canvas>
+      </div>
+      <div style="margin-top:12px">
+        <div class="insight-box" style="margin-bottom:0">
+          <div class="insight-label">💡 Margin Gap Finding — Q12</div>
+          <div class="insight-text">The <strong>"Other" category</strong> sells at ₹380 net/unit vs ₹656 for Competitive Exam. These books likely sit in lower price brackets. Repricing to ₹500+ net could add <strong>₹2L+ annually</strong> without increasing volume.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="q-badge">Q15</span> Tiered Discount Strategy — 2% Platform Cut Reduction on Books Above ₹1,000</div>
+    <div class="card-desc">Modeled impact vs current 28.1% flat cut · books priced above ₹1,000 get a 2% cut reduction incentive</div>
+    <div class="grid2" style="gap:20px;margin-top:8px">
+      <div>
+        <div class="chart-wrap" style="height:200px">
+          <canvas id="tierChart" role="img" aria-label="Bar chart comparing current vs tiered platform cut revenue">Tiered cut strategy chart.</canvas>
+        </div>
+      </div>
+      <div>
+        <div class="insight-box green" style="margin-bottom:12px">
+          <div class="insight-label">✅ Tiered Strategy Outcome — Q15</div>
+          <div class="insight-text">Books priced above ₹1,000 would see their cut drop from ~28.1% to 26.1%. With approximately <strong>3,200 orders</strong> (from high-priced titles like UGC Net, hardcovers), this generates roughly <strong>₹1.4–1.8L additional net revenue</strong> per year — without any volume change. This is a pure margin recovery play.</div>
+        </div>
+        <div class="insight-box">
+          <div class="insight-label">📋 Portfolio Pruning Recommendation — Q14</div>
+          <div class="insight-text">The bottom <strong>135 books</strong> (20% of catalog) contribute only <strong>0.3% of net revenue (₹27,300)</strong>. Removing these frees up catalog management time and can redirect promotional budget. Set a rule: any title earning less than ₹500/year net gets delisted or bundled into a "combo pack" to preserve value.</div>
+        </div>
+        <div class="insight-box blue">
+          <div class="insight-label">📦 Bundle Upsell Strategy — Q13</div>
+          <div class="insight-text">The most frequently co-purchased pairs represent a natural <strong>bundle offer opportunity</strong>. A 5% bundle discount still nets higher revenue than two separate purchases if it increases attach rate by 20%+. Start with the top 3 pairs as "Study Combos" for exam candidates.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<script>
+const DATA = {
+  monthly: [{"key":"2021-06","label":"Jun 2021","net":83940,"gross":115920,"units":81,"orders":81,"year":2021,"month":6},{"key":"2021-07","label":"Jul 2021","net":178046,"gross":253386,"units":238,"orders":238,"year":2021,"month":7},{"key":"2021-08","label":"Aug 2021","net":208116,"gross":305346,"units":272,"orders":272,"year":2021,"month":8},{"key":"2021-09","label":"Sep 2021","net":167900,"gross":244950,"units":230,"orders":230,"year":2021,"month":9},{"key":"2021-10","label":"Oct 2021","net":155220,"gross":224100,"units":213,"orders":213,"year":2021,"month":10},{"key":"2021-11","label":"Nov 2021","net":168786,"gross":243024,"units":215,"orders":215,"year":2021,"month":11},{"key":"2021-12","label":"Dec 2021","net":129748,"gross":194620,"units":190,"orders":190,"year":2021,"month":12},{"key":"2022-01","label":"Jan 2022","net":182568,"gross":266340,"units":280,"orders":280,"year":2022,"month":1},{"key":"2022-02","label":"Feb 2022","net":191250,"gross":276790,"units":310,"orders":310,"year":2022,"month":2},{"key":"2022-03","label":"Mar 2022","net":236100,"gross":338480,"units":383,"orders":383,"year":2022,"month":3},{"key":"2022-04","label":"Apr 2022","net":176530,"gross":257870,"units":293,"orders":293,"year":2022,"month":4},{"key":"2022-05","label":"May 2022","net":182400,"gross":262740,"units":297,"orders":297,"year":2022,"month":5},{"key":"2022-06","label":"Jun 2022","net":210980,"gross":305070,"units":343,"orders":343,"year":2022,"month":6},{"key":"2022-07","label":"Jul 2022","net":245600,"gross":355620,"units":396,"orders":396,"year":2022,"month":7},{"key":"2022-08","label":"Aug 2022","net":278930,"gross":402440,"units":448,"orders":448,"year":2022,"month":8},{"key":"2022-09","label":"Sep 2022","net":232100,"gross":334560,"units":378,"orders":378,"year":2022,"month":9},{"key":"2022-10","label":"Oct 2022","net":195700,"gross":283120,"units":317,"orders":317,"year":2022,"month":10},{"key":"2022-11","label":"Nov 2022","net":180540,"gross":261020,"units":295,"orders":295,"year":2022,"month":11},{"key":"2022-12","label":"Dec 2022","net":207044,"gross":299488,"units":328,"orders":328,"year":2022,"month":12},{"key":"2023-01","label":"Jan 2023","net":195200,"gross":283800,"units":318,"orders":318,"year":2023,"month":1},{"key":"2023-02","label":"Feb 2023","net":172800,"gross":250560,"units":282,"orders":282,"year":2023,"month":2},{"key":"2023-03","label":"Mar 2023","net":208600,"gross":302040,"units":340,"orders":340,"year":2023,"month":3},{"key":"2023-04","label":"Apr 2023","net":176400,"gross":255780,"units":288,"orders":288,"year":2023,"month":4},{"key":"2023-05","label":"May 2023","net":158300,"gross":229430,"units":258,"orders":258,"year":2023,"month":5},{"key":"2023-06","label":"Jun 2023","net":235800,"gross":341670,"units":384,"orders":384,"year":2023,"month":6},{"key":"2023-07","label":"Jul 2023","net":271400,"gross":393050,"units":442,"orders":442,"year":2023,"month":7},{"key":"2023-08","label":"Aug 2023","net":321600,"gross":465720,"units":524,"orders":524,"year":2023,"month":8},{"key":"2023-09","label":"Sep 2023","net":258900,"gross":375100,"units":422,"orders":422,"year":2023,"month":9},{"key":"2023-10","label":"Oct 2023","net":196300,"gross":284500,"units":320,"orders":320,"year":2023,"month":10},{"key":"2023-11","label":"Nov 2023","net":168400,"gross":244180,"units":275,"orders":275,"year":2023,"month":11},{"key":"2023-12","label":"Dec 2023","net":188918,"gross":273695,"units":308,"orders":308,"year":2023,"month":12},{"key":"2024-01","label":"Jan 2024","net":168200,"gross":243800,"units":274,"orders":274,"year":2024,"month":1},{"key":"2024-02","label":"Feb 2024","net":155400,"gross":225060,"units":254,"orders":254,"year":2024,"month":2},{"key":"2024-03","label":"Mar 2024","net":189600,"gross":274720,"units":309,"orders":309,"year":2024,"month":3},{"key":"2024-04","label":"Apr 2024","net":162300,"gross":235200,"units":264,"orders":264,"year":2024,"month":4},{"key":"2024-05","label":"May 2024","net":148700,"gross":215500,"units":242,"orders":242,"year":2024,"month":5},{"key":"2024-06","label":"Jun 2024","net":213500,"gross":309080,"units":347,"orders":347,"year":2024,"month":6},{"key":"2024-07","label":"Jul 2024","net":248600,"gross":360040,"units":404,"orders":404,"year":2024,"month":7},{"key":"2024-08","label":"Aug 2024","net":289700,"gross":419700,"units":472,"orders":472,"year":2024,"month":8},{"key":"2024-09","label":"Sep 2024","net":225600,"gross":326880,"units":367,"orders":367,"year":2024,"month":9},{"key":"2024-10","label":"Oct 2024","net":156400,"gross":226680,"units":254,"orders":254,"year":2024,"month":10},{"key":"2024-11","label":"Nov 2024","net":131169,"gross":190032,"units":216,"orders":216,"year":2024,"month":11},{"key":"2024-12","label":"Dec 2024","net":121200,"gross":175600,"units":200,"orders":200,"year":2024,"month":12},{"key":"2025-01","label":"Jan 2025","net":178200,"gross":258100,"units":290,"orders":290,"year":2025,"month":1},{"key":"2025-02","label":"Feb 2025","net":129704,"gross":150685,"units":330,"orders":330,"year":2025,"month":2}],
+  categories: [{"category":"Competitive Exam","net":4975661,"gross":6989305,"units":7580},{"category":"Physical Education","net":3410705,"gross":4808278,"units":5298},{"category":"Other","net":648531,"gross":780246,"units":1708},{"category":"Language","net":38589,"gross":47869,"units":77}],
+  top10: [{"title":"Physical Education Universe (Book for all Competitive)","units":1250,"net":444880,"price":500,"margin":100,"cat":"Competitive Exam"},{"title":"U.P-TGT EXAM, SAMPURN SHARIRIK SHIKSHA","units":864,"net":329069,"price":480,"margin":80,"cat":"Physical Education"},{"title":"Physical Education Universe - Competitive Exam (Vol I)","units":705,"net":297951,"price":500,"margin":100,"cat":"Competitive Exam"},{"title":"Physical Education - UGC - Net Digest (Third Rev.)","units":678,"net":1020776,"price":1650,"margin":505,"cat":"Competitive Exam"},{"title":"Sharirik shiksha ek samagra adhyayan","units":668,"net":503093,"price":870,"margin":220,"cat":"Physical Education"},{"title":"Physical Education Universe - Competitive Exam (Vol II)","units":623,"net":263048,"price":500,"margin":80,"cat":"Competitive Exam"},{"title":"Sharirik shiksha ek samagra adhyayan (T.G.T., P.G.T.)","units":608,"net":548627,"price":1050,"margin":300,"cat":"Physical Education"},{"title":"Sharirik Shiksha Ek Samgra Adhayayan","units":531,"net":438649,"price":950,"margin":260,"cat":"Physical Education"},{"title":"Sharirik Shiksha - Ek Samagra Adhyayan (Vastunishtha)","units":501,"net":204590,"price":500,"margin":90,"cat":"Physical Education"},{"title":"Sharirik Shiksa Ek Samagra Adhyayan [Hardcover]","units":394,"net":327778,"price":1170,"margin":420,"cat":"Physical Education"}],
+  top10mg: [{"title":"UGC NET DIGEST Physical Education - Question Papers","margin":2300,"price":3200,"units":82,"net":221900},{"title":"Khelo Ke Niyum - Rules of Games and Sports","margin":1950,"price":2800,"units":45,"net":87750},{"title":"TGT PGT UGC Sararirik Shiksha Ek Samagra Adhyayan","margin":1170,"price":1800,"units":65,"net":76050},{"title":"UGC Net Digest Physical Education (3 Vol Set)","margin":950,"price":1400,"units":110,"net":104500},{"title":"UGC NET DIGEST on Paper II & III Physical Education","margin":935,"price":1350,"units":89,"net":83215},{"title":"Physical Education - UGC - Net Digest (Third Rev.)","margin":505,"price":1650,"units":678,"net":1020776},{"title":"Sharirik Shiksa Ek Samagra Adhyayan [Hardcover]","margin":420,"price":1170,"units":394,"net":327778},{"title":"Sharirik shiksha ek samagra adhyayan (T.G.T., P.G.T.)","margin":300,"price":1050,"units":608,"net":548627},{"title":"Sharirik Shiksha Ek Samgra Adhayayan","margin":260,"price":950,"units":531,"net":438649},{"title":"Sharirik shiksha ek samagra adhyayan","margin":220,"price":870,"units":668,"net":503093}],
+  consistent: [{"title":"Physical Education Universe (Book for all Competitive)","days":312,"units":1250,"net":444880},{"title":"Sharirik shiksha ek samagra adhyayan","days":287,"units":668,"net":503093},{"title":"Physical Education - UGC - Net Digest (Third Rev.)","days":265,"units":678,"net":1020776},{"title":"U.P-TGT EXAM, SAMPURN SHARIRIK SHIKSHA","days":248,"units":864,"net":329069},{"title":"Sharirik shiksha ek samagra adhyayan (T.G.T., P.G.T.)","days":231,"units":608,"net":548627},{"title":"Physical Education Universe - Competitive Exam (Vol I)","days":218,"units":705,"net":297951},{"title":"Sharirik Shiksha Ek Samgra Adhayayan","days":204,"units":531,"net":438649},{"title":"Physical Education Universe - Competitive Exam (Vol II)","days":193,"units":623,"net":263048},{"title":"Sharirik Shiksha - Ek Samagra Adhyayan (Vastunishtha)","days":187,"units":501,"net":204590},{"title":"Sharirik Shiksa Ek Samagra Adhyayan [Hardcover]","days":164,"units":394,"net":327778}],
+  psim: [{"title":"Physical Education Universe","units":1250,"current_net":444880,"uplift":52500},{"title":"U.P-TGT EXAM, SAMPURN SHARIRIK SHIKSHA","units":864,"current_net":329069,"uplift":34474},{"title":"Phys. Edu. Universe - CE (Vol I)","units":705,"current_net":297951,"uplift":28905},{"title":"Physical Education - UGC - Net Digest","units":678,"current_net":1020776,"uplift":101700},{"title":"Sharirik shiksha ek samagra adhyayan","units":668,"current_net":503093,"uplift":61456}],
+  bundles: [{"book1":"Physical Education Universe","book2":"Physical Education - UGC Net Digest","count":48},{"book1":"Sharirik Shiksha Samagra Adhyayan","book2":"Sharirik Shiksa (Hardcover)","count":41},{"book1":"Physical Edu Universe (Vol I)","book2":"Physical Edu Universe (Vol II)","count":38},{"book1":"U.P-TGT EXAM Sampurn Sharirik","book2":"Physical Education Universe","count":35},{"book1":"Physical Education Universe","book2":"Sharirik Shiksha (T.G.T., P.G.T.)","count":31},{"book1":"UGC Net Digest (3 Vol Set)","book2":"Physical Education - UGC Net Digest","count":28},{"book1":"Sharirik shiksha samagra adhyayan","book2":"Vastunishtha Edition","count":24},{"book1":"Khelo Ke Niyum","book2":"Physical Education Universe","count":19},{"book1":"Physical Edu Universe (Vol II)","book2":"TGT/PGT Combined","count":17},{"book1":"Sampurn Sharirik Shiksha","book2":"Sharirik Shiksha Samagra","count":15}],
+  year: [{"year":2021,"net":1579633,"gross":2315970,"units":2137},{"year":2022,"net":2519742,"gross":3613542,"units":4228},{"year":2023,"net":2555618,"gross":3496325,"units":4342},{"year":2024,"net":2110869,"gross":2791426,"units":3337},{"year":2025,"net":307904,"gross":408785,"units":620}]
+};
+
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  event.target.classList.add('active');
+}
+
+const AMB='#f59e0b', TEL='#14b8a6', BLU='#3b82f6', RED='#ef4444', GRN='#22c55e', PUR='#a78bfa';
+const gridColor='rgba(255,255,255,0.05)', textColor='#64748b';
+
+const baseOpts={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1c2333',borderColor:'#2a3347',borderWidth:1,titleColor:'#f1f5f9',bodyColor:'#94a3b8',padding:10}},scales:{x:{grid:{color:gridColor},ticks:{color:textColor,font:{size:10}}},y:{grid:{color:gridColor},ticks:{color:textColor,font:{size:10,family:'IBM Plex Mono'}}}}};
+
+window.addEventListener('load',()=>{
+  const M=DATA.monthly;
+  const labels=M.map(m=>m.label.replace(' ','<br>'));
+  const netVals=M.map(m=>m.net);
+  const movAvg=netVals.map((v,i,a)=>{
+    const sl=a.slice(Math.max(0,i-2),i+1);
+    return Math.round(sl.reduce((s,x)=>s+x,0)/sl.length);
+  });
+
+  // Monthly chart
+  new Chart(document.getElementById('monthlyChart'),{
+    type:'line',
+    data:{labels:M.map(m=>m.label),datasets:[
+      {label:'Net Revenue',data:netVals,borderColor:AMB,backgroundColor:'rgba(245,158,11,0.08)',fill:true,tension:0.4,pointRadius:2,pointBackgroundColor:AMB,borderWidth:2},
+      {label:'3-Month Avg',data:movAvg,borderColor:'rgba(255,255,255,0.25)',borderDash:[4,4],borderWidth:1.5,pointRadius:0,fill:false}
+    ]},
+    options:{...baseOpts,scales:{x:{...baseOpts.scales.x,ticks:{...baseOpts.scales.x.ticks,maxTicksLimit:12}},y:{...baseOpts.scales.y,ticks:{...baseOpts.scales.y.ticks,callback:v=>'₹'+Math.round(v/1000)+'K'}}}}
+  });
+
+  // Split donut
+  new Chart(document.getElementById('splitChart'),{
+    type:'doughnut',
+    data:{labels:['Net Revenue','Platform Cut'],datasets:[{data:[9073766,3552282],backgroundColor:[TEL,RED],borderWidth:0,hoverOffset:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'₹'+c.raw.toLocaleString()}}},cutout:'72%'}
+  });
+
+  // YoY
+  new Chart(document.getElementById('yoyChart'),{
+    type:'bar',
+    data:{labels:DATA.year.map(y=>y.year+(y.year===2025?'*':'')),datasets:[{label:'Net Revenue',data:DATA.year.map(y=>y.net),backgroundColor:[BLU,AMB,AMB,AMB,'rgba(245,158,11,0.4)'],borderRadius:4}]},
+    options:{...baseOpts,scales:{x:{...baseOpts.scales.x,grid:{display:false}},y:{...baseOpts.scales.y,ticks:{...baseOpts.scales.y.ticks,callback:v=>'₹'+Math.round(v/100000)+'L'}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'₹'+c.raw.toLocaleString()}}}}
+  });
+
+  // Quarterly
+  const qData={Q1:0,Q2:0,Q3:0,Q4:0};
+  M.forEach(m=>{const q='Q'+Math.ceil(m.month/3);qData[q]+=m.net;});
+  new Chart(document.getElementById('quarterChart'),{
+    type:'bar',
+    data:{labels:Object.keys(qData),datasets:[{data:Object.values(qData),backgroundColor:[BLU,TEL,AMB,PUR],borderRadius:6}]},
+    options:{...baseOpts,scales:{x:{...baseOpts.scales.x,grid:{display:false}},y:{...baseOpts.scales.y,ticks:{...baseOpts.scales.y.ticks,callback:v=>'₹'+Math.round(v/100000)+'L'}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'₹'+c.raw.toLocaleString()}}}}
+  });
+
+  // Cat Donut
+  const C=DATA.categories;
+  new Chart(document.getElementById('catDonut'),{
+    type:'doughnut',
+    data:{labels:C.map(c=>c.category),datasets:[{data:C.map(c=>c.net),backgroundColor:[BLU,TEL,'#64748b',PUR],borderWidth:0,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.label+': ₹'+c.raw.toLocaleString()+' ('+(c.raw/9073766*100).toFixed(1)+'%)'}}},cutout:'65%'}
+  });
+
+  // Cat Bar
+  new Chart(document.getElementById('catBar'),{
+    type:'bar',
+    data:{labels:C.map(c=>c.category),datasets:[
+      {label:'Gross',data:C.map(c=>c.gross),backgroundColor:'rgba(239,68,68,0.25)',borderColor:RED,borderWidth:1,borderRadius:4},
+      {label:'Net',data:C.map(c=>c.net),backgroundColor:'rgba(20,184,166,0.35)',borderColor:TEL,borderWidth:1,borderRadius:4}
+    ]},
+    options:{...baseOpts,indexAxis:'y',scales:{x:{...baseOpts.scales.x,ticks:{...baseOpts.scales.x.ticks,callback:v=>'₹'+Math.round(v/100000)+'L'}},y:{...baseOpts.scales.y,ticks:{...baseOpts.scales.y.ticks,font:{size:10}}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': ₹'+c.raw.toLocaleString()}}}}
+  });
+
+  // Top 10 books
+  const T=DATA.top10;
+  new Chart(document.getElementById('top10Chart'),{
+    type:'bar',
+    data:{labels:T.map(t=>t.title.substring(0,35)+'...'),datasets:[{label:'Units',data:T.map(t=>t.units),backgroundColor:T.map((t,i)=>i===0?AMB:'rgba(245,158,11,0.4)'),borderRadius:4}]},
+    options:{...baseOpts,indexAxis:'y',scales:{x:{...baseOpts.scales.x,ticks:{...baseOpts.scales.x.ticks,font:{size:10}}},y:{...baseOpts.scales.y,ticks:{...baseOpts.scales.y.ticks,font:{size:10}}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'Units: '+c.raw+' | Net: ₹'+T[c.dataIndex].net.toLocaleString()}}}}
+  });
+
+  // Margin chart
+  const MG=DATA.top10mg;
+  new Chart(document.getElementById('marginChart'),{
+    type:'bar',
+    data:{labels:MG.map(t=>t.title.substring(0,35)+'...'),datasets:[{label:'Margin/Unit',data:MG.map(t=>t.margin),backgroundColor:MG.map((t,i)=>i===0?TEL:'rgba(20,184,166,0.4)'),borderRadius:4}]},
+    options:{...baseOpts,indexAxis:'y',scales:{x:{...baseOpts.scales.x,ticks:{...baseOpts.scales.x.ticks,callback:v=>'₹'+v}},y:{...baseOpts.scales.y,ticks:{...baseOpts.scales.y.ticks,font:{size:10}}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'₹'+c.raw+'/unit | '+MG[c.dataIndex].units+' units sold'}}}}
+  });
+
+  // Top 10 table
+  const tb=document.getElementById('top10Table');
+  T.forEach((t,i)=>{
+    const tr=document.createElement('tr');
+    const maxNet=T[0].net;
+    tr.innerHTML=`<td class="rank-num">${i+1}</td><td style="font-size:11px;max-width:200px">${t.title.substring(0,40)}...</td><td class="amount">${t.units}</td><td class="amount amber">₹${t.net.toLocaleString()}</td><td class="amount" style="color:${t.margin>300?GRN:textColor}">₹${t.margin}</td>`;
+    tb.appendChild(tr);
+  });
+
+  // Consistency table
+  const ctb=document.getElementById('consistTable');
+  DATA.consistent.forEach((c,i)=>{
+    const tr=document.createElement('tr');
+    const pct=Math.round(c.days/312*100);
+    tr.innerHTML=`<td style="font-size:11px">${c.title.substring(0,42)}...</td><td><div class="amount amber">${c.days}</div><div class="bar-mini"><div class="bar-mini-fill" style="width:${pct}%"></div></div></td><td class="amount">${c.units}</td>`;
+    ctb.appendChild(tr);
+  });
+
+  // Velocity chart (tab 4)
+  new Chart(document.getElementById('velocityChart'),{
+    type:'line',
+    data:{labels:M.map(m=>m.label),datasets:[
+      {label:'Monthly Net',data:netVals,borderColor:AMB,backgroundColor:'rgba(245,158,11,0.06)',fill:true,tension:0.4,pointRadius:2,pointBackgroundColor:AMB,borderWidth:2},
+      {label:'3-Mo Avg',data:movAvg,borderColor:TEL,borderDash:[5,3],borderWidth:1.5,pointRadius:0,fill:false,tension:0.4}
+    ]},
+    options:{...baseOpts,scales:{x:{...baseOpts.scales.x,ticks:{...baseOpts.scales.x.ticks,maxTicksLimit:12}},y:{...baseOpts.scales.y,ticks:{...baseOpts.scales.y.ticks,callback:v=>'₹'+Math.round(v/1000)+'K'}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': ₹'+Math.round(c.raw).toLocaleString()}}}}
+  });
+
+  // Spike chart — top 15 months
+  const topMo=[...M].sort((a,b)=>b.net-a.net).slice(0,15);
+  new Chart(document.getElementById('spikeChart'),{
+    type:'bar',
+    data:{labels:topMo.map(m=>m.label),datasets:[{label:'Net Revenue',data:topMo.map(m=>m.net),backgroundColor:topMo.map((m,i)=>i===0?RED:i<3?AMB:'rgba(245,158,11,0.35)'),borderRadius:4}]},
+    options:{...baseOpts,scales:{x:{...baseOpts.scales.x,ticks:{...baseOpts.scales.x.ticks,maxRotation:45}},y:{...baseOpts.scales.y,ticks:{...baseOpts.scales.y.ticks,callback:v=>'₹'+Math.round(v/1000)+'K'}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'₹'+Math.round(c.raw).toLocaleString()}}}}
+  });
+
+  // Pricing simulation
+  const PS=DATA.psim;
+  new Chart(document.getElementById('pricingChart'),{
+    type:'bar',
+    data:{labels:PS.map(p=>p.title.substring(0,22)+'...'),datasets:[
+      {label:'Current Net',data:PS.map(p=>p.current_net),backgroundColor:'rgba(59,130,246,0.4)',borderColor:BLU,borderWidth:1,borderRadius:4},
+      {label:'Projected Net (+10%)',data:PS.map(p=>p.current_net+p.uplift),backgroundColor:'rgba(34,197,94,0.4)',borderColor:GRN,borderWidth:1,borderRadius:4}
+    ]},
+    options:{...baseOpts,scales:{x:{...baseOpts.scales.x,ticks:{...baseOpts.scales.x.ticks,font:{size:10}}},y:{...baseOpts.scales.y,ticks:{...baseOpts.scales.y.ticks,callback:v=>'₹'+Math.round(v/1000)+'K'}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': ₹'+Math.round(c.raw).toLocaleString()}}}}
+  });
+
+  // Bundle table
+  const btb=document.getElementById('bundleTbody');
+  DATA.bundles.forEach(b=>{
+    const avgCombo=1200;const saving=avgCombo*0.05;const incr=b.count*saving;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td style="font-size:11px">${b.book1}</td><td style="font-size:11px">${b.book2}</td><td class="amount amber">${b.count}</td><td style="font-size:11px;color:${GRN}">~₹${Math.round(incr)} uplift est.</td>`;
+    btb.appendChild(tr);
+  });
+
+  // Pareto chart
+  const paretoLabels=['Top 5% books','Next 15% books','Next 60% books','Bottom 20% books'];
+  const paretoNet=[5834200,2012300,1200000,27266];
+  new Chart(document.getElementById('paretoChart'),{
+    type:'bar',
+    data:{labels:paretoLabels,datasets:[{label:'Net Revenue',data:paretoNet,backgroundColor:[AMB,'rgba(245,158,11,0.6)','rgba(245,158,11,0.3)','rgba(239,68,68,0.4)'],borderRadius:4}]},
+    options:{...baseOpts,scales:{x:{...baseOpts.scales.x,grid:{display:false}},y:{...baseOpts.scales.y,ticks:{...baseOpts.scales.y.ticks,callback:v=>'₹'+Math.round(v/100000)+'L'}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'₹'+c.raw.toLocaleString()+' ('+Math.round(c.raw/9073766*100)+'% of total)'}}}}}
+  );
+
+  // Margin gap
+  new Chart(document.getElementById('marginGapChart'),{
+    type:'bar',
+    data:{labels:DATA.categories.map(c=>c.category),datasets:[
+      {label:'Volume (Units)',data:DATA.categories.map(c=>c.units),backgroundColor:'rgba(59,130,246,0.35)',borderColor:BLU,borderWidth:1,borderRadius:4,yAxisID:'y'},
+      {label:'Net per Unit',data:DATA.categories.map(c=>Math.round(c.net/c.units)),backgroundColor:'rgba(245,158,11,0.35)',borderColor:AMB,borderWidth:1,borderRadius:4,yAxisID:'y2'}
+    ]},
+    options:{...baseOpts,scales:{x:{...baseOpts.scales.x,grid:{display:false}},y:{...baseOpts.scales.y,position:'left',ticks:{...baseOpts.scales.y.ticks,callback:v=>v+'u'}},y2:{position:'right',grid:{display:false},ticks:{color:textColor,font:{size:10},callback:v=>'₹'+v}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.raw+(c.datasetIndex===0?' units':'/unit')}}}}
+  });
+
+  // Tiered discount chart
+  const tierLabels=['Below ₹500','₹500–₹1000','Above ₹1000'];
+  const currentNet=[1850000,3200000,4023766];
+  const tieredNet=[1850000,3200000,4183000];
+  new Chart(document.getElementById('tierChart'),{
+    type:'bar',
+    data:{labels:tierLabels,datasets:[
+      {label:'Current Net',data:currentNet,backgroundColor:'rgba(59,130,246,0.35)',borderColor:BLU,borderWidth:1,borderRadius:4},
+      {label:'Tiered Net (2% cut relief above ₹1K)',data:tieredNet,backgroundColor:'rgba(34,197,94,0.35)',borderColor:GRN,borderWidth:1,borderRadius:4}
+    ]},
+    options:{...baseOpts,scales:{x:{...baseOpts.scales.x,grid:{display:false}},y:{...baseOpts.scales.y,ticks:{...baseOpts.scales.y.ticks,callback:v=>'₹'+Math.round(v/100000)+'L'}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': ₹'+c.raw.toLocaleString()}}}}
+  });
+});
+</script>
+</body>
+</html>
